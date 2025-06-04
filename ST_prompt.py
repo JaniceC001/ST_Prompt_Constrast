@@ -47,7 +47,7 @@ class PromptEditor:
             self.edit_frame = tk.Frame(self.root)
             self.edit_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-            self.label1= tk.Label(self.edit_frame, text="Prompt內容", font=("Helvetica", 12, "bold"))
+            self.label1= tk.Label(self.edit_frame, text="Prompt內容(不可修改)", font=("Helvetica", 12, "bold"))
             self.label1.pack(anchor='w', padx=5, pady=(5,0)) #?
 
             #tk.WORD = 自動換行 // Courier=等寬字體
@@ -83,17 +83,62 @@ class PromptEditor:
                 #開啟檔案 = 使用json.load載入
                 with open(filepath, "r", encoding="utf-8") as file_data:
                     raw = json.load(file_data)
-                    #存放prompt
+                    order_data = raw.get("prompt_order",[])
+
+                    #抓取未排序的prompt
                     self.data_v1 = raw.get("prompts",[])
-                    self.data_v2 = copy.deepcopy(self.data_v1)  #複製一個可編輯版本
+
+                    #存放order
+                    order_list = []
+                    #group = character_id => 尋找character_id
+                    for group in order_data:
+                        #如果找到100001
+                        if group.get("character_id") == 100001:
+                            #取得order清單
+                            order_ids = group.get("order",[])
+                            #建立一個dict字典, 存放每個prompt的identifier
+                            prompt_dict = {
+                                p.get("identifier"): p for p in self.data_v1
+                            }
+                            
+                            #取出order清單
+                            for item in order_ids:
+                                #取出indentifier
+                                ident = item.get("identifier")
+                                enabled = item.get("enabled",True)
+                                
+                                #檢查identifier是否存在dict中 -> true
+                                if ident in prompt_dict:
+                                    prompt = prompt_dict[ident] #抓出prompt(整個)
+                                    order_list.append(prompt)   #放到order list
+
+                            #找到適合的character_id就結束
+                            break 
                     
+                    #存放prompt
+                    self.data_v1 = order_list                   #根據order_list排序
+                    self.data_v2 = copy.deepcopy(self.data_v1)  #複製一個可編輯版本
+
                     #清空listbox(初始化)
                     self.prompt_listbox.delete(0, tk.END)
+
+                    #把prompt的標題名放進list中(附贈是否開啟)
+                    '''
+                    for prompt in self.data_v1:
+                        name = prompt.get("name", "未命名")
+                        enabled = prompt.get("enabled", True)
+                        if not enabled:
+                            name = f"❌ {name}"
+                        else:
+                            name = f"✅ {name}"
+                        self.prompt_listbox.insert(tk.END, name)
+                    '''
 
                     #把prompt的標題名放進list中
                     for prompt in self.data_v1:
                         name = prompt.get("name","未命名")
                         self.prompt_listbox.insert(tk.END, name)
+                    
 
             #error訊息
             except Exception as e:
