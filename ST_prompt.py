@@ -5,7 +5,7 @@ import copy
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QListWidget, QTextEdit,
-    QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog
+    QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -19,8 +19,6 @@ class PromptEditor(QWidget):
 
         self.data_v1= [] #儲存prompt的json資料(原版)
         self.data_v2= [] #複製版, 提供修改用
-
-        self.saved = False #檢查是否儲存
 
         # 綁定關閉視窗事件
         #self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -101,6 +99,10 @@ class PromptEditor(QWidget):
             self.text_area2.textChanged.connect(self.on_text_modified)
             edit_layout.addWidget(self.text_area2)
 
+            # 修改偵測
+            self.text_area2.document().setModified(False) #檢查是否儲存
+            self.text_area2.textChanged.connect(self.on_text_modified)
+
             # 主畫面佈局，左右排
             main_layout = QHBoxLayout()
             main_layout.addWidget(self.nav_frame)
@@ -135,10 +137,10 @@ class PromptEditor(QWidget):
 
 
     def on_text_modified(self):
-        #if self.text_area2.edit_modified():
-            if self.saved:
-                print("內容已修改")
-                self.saved = False
+        if self.text_area2.document().isModified():
+            self.setWindowTitle("Editor-尚未儲存")
+        else:
+            self.setWindowTitle("Editor")
 
             #self.text_area2.edit_modified(False)
 
@@ -259,6 +261,8 @@ class PromptEditor(QWidget):
             with open(path, "w", encoding="utf-8") as f:
                  json.dump(output, f, indent=2, ensure_ascii=False)
             QMessageBox.information(self, "成功", "已儲存")
+            self.text_area2.document().setModified(False)
+            self.setWindowTitle("Editor")
         except Exception as e:
             QMessageBox.critical(self, "錯誤", f"儲存失敗: {e}")
 
@@ -271,13 +275,16 @@ class PromptEditor(QWidget):
             update_text = self.text_area2.toPlainText().strip()
             self.data_v2[self.current_index]["content"] = update_text
             
-    def on_close(self,event):
-        if not self.saved:
-            reply = QMessageBox.question(self, "尚未儲存", "你尚未保存，確定要離開嗎？", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            if reply == QMessageBox.StandardButton.No:
-                event.ignore()
-                return
-        event.accept()
+    def closeEvent(self,event):
+        if self.text_area2.document().isModified():
+            reply = QMessageBox.question(self, "尚未儲存", "你尚未保存，確定要離開嗎？", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                event.accept()  # 允許關閉
+            else:
+                event.ignore()  # 阻止關閉
+        else:
+            event.accept()
             
 
 
