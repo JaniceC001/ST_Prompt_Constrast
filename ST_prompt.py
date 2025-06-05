@@ -95,6 +95,7 @@ class PromptEditor(QWidget):
             self.text_area2 = QTextEdit()
             self.text_area2.setFont(QFont("Courier", 10))
             self.text_area2.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+            
             self.text_area2.setFixedHeight(300)
             self.text_area2.textChanged.connect(self.on_text_modified)
             edit_layout.addWidget(self.text_area2)
@@ -218,6 +219,16 @@ class PromptEditor(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "錯誤", f"讀取檔案失敗: {e}")
 
+    #偵測是否不可修改
+    def detect_ReadOnly(self, index, prompt_content):
+            no_change_list = ["chatHistory", "worldInfoAfter", "worldInfoBefore", "dialogueExamples", "charDescription", "charPersonality", "scenario", "personaDescription", ]
+            
+            ident = self.data_v2[index].get("identifier","")
+            
+            if ident in no_change_list:
+                return True, "此條目不可修改"
+            else:
+                return False, prompt_content
     #點擊prompt
     def prompt_select(self, index):
         #告知目前點擊哪一行
@@ -233,13 +244,17 @@ class PromptEditor(QWidget):
 
         #顯示prompt內容(v1)
         prompt_v1 = self.data_v1[index].get("content","")
+        change, PlainText = self.detect_ReadOnly(index, prompt_v1)
         self.text_area1.setReadOnly(False)
-        self.text_area1.setPlainText(prompt_v1)
+        self.text_area1.setPlainText(PlainText)
         self.text_area1.setReadOnly(True)
-
+        self.label1.setText(f"{self.data_v1[index].get("name","")}")
+        
         #顯示V2
-        prompt_v2 = self.data_v2[index].get("content", "")
+        prompt_v2 = self.data_v2[index].get("content", "")        
+        self.text_area2.setReadOnly(False)
         self.text_area2.setPlainText(prompt_v2)
+        self.text_area2.setReadOnly(change)
 
         #prompt = self.data[index]   #調用index位置的內容出來
 
