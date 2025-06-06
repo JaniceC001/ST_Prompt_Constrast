@@ -5,17 +5,19 @@ import copy
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QListWidget, QTextEdit,
-    QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QMessageBox
+    QPushButton, QHBoxLayout, QVBoxLayout, QLabel, QFileDialog, QMessageBox,
+    QSizePolicy, QMainWindow, QComboBox
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QFontMetrics
 
-class PromptEditor(QWidget):
+class PromptEditor(QMainWindow):
     #__init__ 初始化
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Editor")
         self.resize(900, 600)
+        self.font_size=12
 
         self.data_v1= [] #儲存prompt的json資料(原版)
         self.data_v2= [] #複製版, 提供修改用
@@ -24,7 +26,7 @@ class PromptEditor(QWidget):
         #self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.current_index = None   #目前選擇的prompt
-        self.setStyleSheet(f"color: {"#000000"}; background-color: {"#ffffff"};")
+        self.setStyleSheet(f"color: {'#000000'}; background-color: {'#ffffff'};") #預設主題
 
         self.create()       #子程序create = 建立UI
         self.load_json()    #子程序load_json = 讀取json
@@ -32,8 +34,7 @@ class PromptEditor(QWidget):
     def create(self):
             # 左側導覽列區塊
             self.nav_frame = QWidget()
-            self.nav_frame.setFixedWidth(250)
-            self.nav_frame.setStyleSheet("background-color: #ffffff;")
+        
             nav_layout = QVBoxLayout()
             nav_layout.setContentsMargins(5,5,5,5)
             nav_layout.setSpacing(10)
@@ -43,7 +44,7 @@ class PromptEditor(QWidget):
             self.prompt_listbox = QListWidget()
             self.prompt_listbox.setFont(QFont("Helvetica", 12))
             nav_layout.addWidget(self.prompt_listbox)
-
+            
             # 選擇事件
             self.prompt_listbox.currentRowChanged.connect(self.prompt_select)
 
@@ -66,6 +67,20 @@ class PromptEditor(QWidget):
             self.bg_button = QPushButton("白天模式")
             self.bg_button.clicked.connect(lambda: self.change_bg_color("#ffffff","#000000","#fcfcfc"))
             nav_layout.addWidget(self.bg_button)
+            
+            #放大
+            self.font_button = QPushButton("+")
+            self.font_button.clicked.connect(self.plus_font_size)
+            nav_layout.addWidget(self.font_button)
+
+            #縮小
+            self.font2_button = QPushButton("-")
+            self.font2_button.clicked.connect(self.minu_font)
+            nav_layout.addWidget(self.font2_button)
+            
+            self.nav_frame.setMinimumWidth(250)
+            self.nav_frame.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+            
 
             # 右側編輯區域
             self.edit_frame = QWidget()
@@ -75,6 +90,8 @@ class PromptEditor(QWidget):
             self.edit_frame.setLayout(edit_layout)
 
             # Label1
+            #self.label1 = self.make_label("Prompt內容(不可修改)",12)
+            #edit_layout.addWidget(self.label1)
             self.label1 = QLabel("Prompt內容(不可修改)")
             self.label1.setFont(QFont("Helvetica", 12, QFont.Weight.Bold))
             edit_layout.addWidget(self.label1, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -91,6 +108,8 @@ class PromptEditor(QWidget):
             self.label2 = QLabel("修改區")
             self.label2.setFont(QFont("Helvetica", 12, QFont.Weight.Bold))
             edit_layout.addWidget(self.label2, alignment=Qt.AlignmentFlag.AlignLeft)
+            #self.label2 = self.make_label("修改區",12)
+            #edit_layout.addWidget(self.label2)
 
             # text_area2 (可編輯)
             self.text_area2 = QTextEdit()
@@ -101,16 +120,29 @@ class PromptEditor(QWidget):
             self.text_area2.textChanged.connect(self.on_text_modified)
             edit_layout.addWidget(self.text_area2)
 
+            '''
+            #放大縮小
+            nav_layout.addWidget(QLabel("字型大小"))
+            self.font_set = QComboBox()
+            self.font_set.addItems(["12","14","18","20","24","28","32"])
+            nav_layout.addWidget(self.font_set)
+            self.font_set.currentTextChanged.connect(self.font_size_event)
+            '''
+
             # 修改偵測
             self.text_area2.document().setModified(False) #檢查是否儲存
             self.text_area2.textChanged.connect(self.on_text_modified)
+
+            self.edit_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             # 主畫面佈局，左右排
             main_layout = QHBoxLayout()
             main_layout.addWidget(self.nav_frame)
             main_layout.addWidget(self.edit_frame, 1)
 
-            self.setLayout(main_layout)
+            container = QWidget()
+            container.setLayout(main_layout)
+            self.setCentralWidget(container)
 
     def change_bg_color(self, color, font_color, box_color):
         widgets_to_update = [
@@ -137,6 +169,49 @@ class PromptEditor(QWidget):
         for tarea in text_area_update:
             tarea.setStyleSheet(f"background-color: {box_color};")
 
+    def make_label(self,text, font_size):
+        label = QLabel(text)
+        font = QFont("Helvetica", font_size)
+        label.setFont(font)
+        label.setFixedHeight(QFontMetrics(font).height())
+        return label
+
+    def plus_font_size(self, size):
+        self.font_size += 1
+        if self.font_size >= self.width():
+            self.font_size -= 1
+        self.font_size_event(self.font_size)
+
+    def minu_font(self):
+        self.font_size -= 1
+        if self.font_size < 12:
+            self.font_size = 12
+        self.font_size_event(self.font_size)
+    
+    def font_size_event(self, size):
+        font = QFont("Courier", self.font_size)
+        self.text_area1.setFont(font)
+        self.text_area2.setFont(font)
+
+        label_font = QFont("Helvetica", self.font_size, QFont.Weight.Bold)
+        self.label1.setFont(label_font)
+        self.label2.setFont(label_font)
+
+
+    def resizeEvent(self, event):
+        # 根據視窗寬度設定大小，例如：寬度 / 50
+        base_width = self.width()
+        font_size = max(int(base_width / 100), 12)
+
+        # 設定 label 和 text_edit 字體大小
+        font1 = QFont("Helvetica", font_size)
+        font2 = QFont("Courier", font_size)
+
+        self.label1.setFont(font1)
+        self.label2.setFont(font1)
+        self.text_area1.setFont(font2)
+        self.text_area2.setFont(font2)
+        self.font_size = font_size
 
     def on_text_modified(self):
         if self.text_area2.document().isModified():
