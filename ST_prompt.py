@@ -24,6 +24,7 @@ class PromptEditor(QWidget):
         #self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.current_index = None   #目前選擇的prompt
+        self.setStyleSheet(f"color: {"#000000"}; background-color: {"#ffffff"};")
 
         self.create()       #子程序create = 建立UI
         self.load_json()    #子程序load_json = 讀取json
