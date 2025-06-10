@@ -342,8 +342,8 @@ class PromptEditor(QMainWindow):
             self.data_v2[self.current_index]["content"] = update_text
 
         #儲存位置
-        options = QFileDialog.Options()
-        path, _ = QFileDialog.getSaveFileName(self, "儲存修改後的 JSON", "", "JSON Files (*.json);;All Files (*)", options=options)
+        #options = QFileDialog.Options()
+        path, _ = QFileDialog.getSaveFileName(self, "儲存修改後的 JSON", "", "JSON Files (*.json);;All Files (*)")
         if not path:
             return
         #寫入檔案
